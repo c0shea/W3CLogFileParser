@@ -23,7 +23,17 @@ namespace W3CLogFileParser
             {
                 Logger.Info($"Processing file {file}");
 
-                var lines = File.ReadAllLines(file);
+                string[] lines;
+
+                try
+                {
+                    lines = File.ReadAllLines(file);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn(ex, $"Unable to read file {file}. Skipping.");
+                    continue;
+                }
 
                 var fileHasErrors = false;
                 string[] fieldOrder = null;
