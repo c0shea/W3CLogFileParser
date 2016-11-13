@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("W3CLogFileParser")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("W3C Log File Parser")]
+[assembly: AssemblyDescription("Parses W3C-compliant log files into a database table")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("W3CLogFileParser")]
-[assembly: AssemblyCopyright("Copyright ©  2016")]
+[assembly: AssemblyCopyright("Copyright © 2016 Connor O'Shea")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
