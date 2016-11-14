@@ -94,7 +94,7 @@ namespace W3CLogFileParser
                                 null
                             )
                             {
-                                DestinationTableName = "Logs.IisRequest"
+                                DestinationTableName = Settings.Default.DestinationTable
                             };
 
                             connection.Open();

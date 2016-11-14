@@ -35,7 +35,7 @@ namespace W3CLogFileParser.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("D:\\Server IIS Logs\\LogFiles\\W3SVC3_notproc")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\inetpub\\logs\\LogFiles")]
         public string LogFileDirectory {
             get {
                 return ((string)(this["LogFileDirectory"]));
@@ -48,6 +48,15 @@ namespace W3CLogFileParser.Properties {
         public string LogFileMask {
             get {
                 return ((string)(this["LogFileMask"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Logs.IisRequest")]
+        public string DestinationTable {
+            get {
+                return ((string)(this["DestinationTable"]));
             }
         }
     }

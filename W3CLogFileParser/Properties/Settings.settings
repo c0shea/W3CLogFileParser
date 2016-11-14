@@ -16,5 +16,8 @@
     <Setting Name="LogFileMask" Type="System.String" Scope="Application">
       <Value Profile="(Default)">u_ex*.log</Value>
     </Setting>
+    <Setting Name="DestinationTable" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Logs.IisRequest</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
