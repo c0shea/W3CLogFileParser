@@ -5,6 +5,11 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "W3CLogFileParser", "W3CLogFileParser\W3CLogFileParser.csproj", "{4ED55DF2-B44C-44E0-8324-FDB90E387CA1}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BC083770-E1D2-4A07-987C-E6AE0B681B02}"
+	ProjectSection(SolutionItems) = preProject
+		Create Table.sql = Create Table.sql
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

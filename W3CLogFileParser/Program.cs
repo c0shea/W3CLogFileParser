@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using NLog;
@@ -16,6 +17,7 @@ namespace W3CLogFileParser
 
         public static void Main(string[] args)
         {
+            var stopwatch = Stopwatch.StartNew();
             Logger.Info("===============");
             Logger.Info("Program started");
 
@@ -70,45 +72,50 @@ namespace W3CLogFileParser
                     catch (Exception ex)
                     {
                         fileHasErrors = true;
-                        Logger.Error(ex, "An error occured trying to parse the line and add it to the DataTable.");
+                        Logger.Error(ex, $"An error occured trying to parse the line [{line}] and add it to the DataTable. Skipping file.");
+                        break;
                     }
                 }
 
-                try
+                if (!fileHasErrors)
                 {
-                    Logger.Debug($"Bulk inserting {table.Rows.Count} rows...");
-
-                    using (SqlConnection connection = new SqlConnection(Settings.Default.DataWarehouseConnectionString))
+                    try
                     {
-                        var bulkCopy = new SqlBulkCopy
-                        (
-                            connection,
-                            SqlBulkCopyOptions.TableLock |
-                            SqlBulkCopyOptions.FireTriggers |
-                            SqlBulkCopyOptions.UseInternalTransaction,
-                            null
-                        )
+                        Logger.Debug($"Bulk inserting {table.Rows.Count} rows...");
+
+                        using (SqlConnection connection = new SqlConnection(Settings.Default.DataWarehouseConnectionString))
                         {
-                            DestinationTableName = "Logs.IisRequest"
-                        };
+                            var bulkCopy = new SqlBulkCopy
+                            (
+                                connection,
+                                SqlBulkCopyOptions.TableLock |
+                                SqlBulkCopyOptions.FireTriggers |
+                                SqlBulkCopyOptions.UseInternalTransaction,
+                                null
+                            )
+                            {
+                                DestinationTableName = "Logs.IisRequest"
+                            };
 
-                        connection.Open();
-                        bulkCopy.WriteToServer(table);
-                        connection.Close();
+                            connection.Open();
+                            bulkCopy.WriteToServer(table);
+                            connection.Close();
+                        }
+
+                        Logger.Debug("Finished bulk insert.");
                     }
+                    catch (SqlException ex)
+                    {
+                        Logger.Error(ex, "Failed to insert the records into the database.");
+                        fileHasErrors = true;
+                    }
+                }
 
-                    Logger.Debug("Finished bulk insert. Clearing DataTable.");
-                    table.Clear();
-                }
-                catch (SqlException ex)
-                {
-                    Logger.Error(ex, "Failed to insert the records into the database.");
-                    fileHasErrors = true;
-                }
+                table.Clear();
 
                 if (fileHasErrors)
                 {
-                    Logger.Warn($"File {file} encountered errors during parsing. Some records may have been skipped.");
+                    Logger.Warn($"File {file} encountered errors during parsing. The records in the file were not inserted into the database.");
 
                     var renameTo = file + ".wrn";
                     Logger.Debug($"Renaming file to {renameTo}");
@@ -122,7 +129,8 @@ namespace W3CLogFileParser
                 }
             }
 
-            Logger.Info("Program finished");
+            stopwatch.Stop();
+            Logger.Info($"Program finished. Elapsed time: {stopwatch.ElapsedMilliseconds / 1000} seconds ({stopwatch.ElapsedMilliseconds} ms)");
         }
 
         private static DataTable PrepareBulkCopyDataTable()
@@ -147,7 +155,7 @@ namespace W3CLogFileParser
             table.Columns.Add(new DataColumn("Referrer", typeof(SqlString)));
             table.Columns.Add(new DataColumn("Username", typeof(SqlString)));
             table.Columns.Add(new DataColumn("Cookie", typeof(SqlString)));
-            table.Columns.Add(new DataColumn("Win32Status", typeof(short)));
+            table.Columns.Add(new DataColumn("Win32Status", typeof(long)));
             table.Columns.Add(new DataColumn("ServiceName", typeof(SqlString)));
             table.Columns.Add(new DataColumn("Host", typeof(SqlString)));
             table.Columns.Add(new DataColumn("BytesSent", typeof(long)));

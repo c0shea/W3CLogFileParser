@@ -11,7 +11,7 @@
       <Value Profile="(Default)">Data Source=SERVER;Initial Catalog=DataWarehouse;Integrated Security=True</Value>
     </Setting>
     <Setting Name="LogFileDirectory" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">D:\Server IIS Logs\LogFiles\W3SVC1</Value>
+      <Value Profile="(Default)">C:\inetpub\logs\LogFiles</Value>
     </Setting>
     <Setting Name="LogFileMask" Type="System.String" Scope="Application">
       <Value Profile="(Default)">u_ex*.log</Value>

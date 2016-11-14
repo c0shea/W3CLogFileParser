@@ -6,6 +6,8 @@ namespace W3CLogFileParser
 {
     public class IisRequestLogEntry
     {
+        private const int MaxStringLength = 8000;
+
         public DateTime? Date { get; set; }
         public TimeSpan? Time { get; set; }
         public string ServerName { get; set; }
@@ -14,7 +16,7 @@ namespace W3CLogFileParser
         public string Method { get; set; }
         public string UriStem { get; set; }
         public string UriQuery { get; set; }
-        public short? TimeTakenInMilliseconds { get; set; }
+        public int? TimeTakenInMilliseconds { get; set; }
         public short? ProtocolStatus { get; set; }
         public short? ProtocolSubstatus { get; set; }
         public string ProtocolVersion { get; set; }
@@ -23,7 +25,7 @@ namespace W3CLogFileParser
         public string Referrer { get; set; }
         public string Username { get; set; }
         public string Cookie { get; set; }
-        public short? Win32Status { get; set; }
+        public long? Win32Status { get; set; }
         public string ServiceName { get; set; }
         public string Host { get; set; }
         public long? BytesSent { get; set; }
@@ -69,10 +71,10 @@ namespace W3CLogFileParser
                         Method = val;
                         break;
                     case "cs-uri-stem":
-                        UriStem = val;
+                        UriStem = val.Truncate(MaxStringLength);
                         break;
                     case "cs-uri-query":
-                        UriQuery = val;
+                        UriQuery = val.Truncate(MaxStringLength);
                         break;
                     case "s-port":
                         ServerPort = int.Parse(val);
@@ -87,13 +89,13 @@ namespace W3CLogFileParser
                         ProtocolVersion = val;
                         break;
                     case "cs(User-Agent)":
-                        UserAgent = val;
+                        UserAgent = val.Truncate(1500);
                         break;
                     case "cs(Cookie)":
                         Cookie = val;
                         break;
                     case "cs(Referer)":
-                        Referrer = val;
+                        Referrer = val.Truncate(MaxStringLength);
                         break;
                     case "cs-host":
                         Host = val;
@@ -105,7 +107,7 @@ namespace W3CLogFileParser
                         ProtocolSubstatus = short.Parse(val);
                         break;
                     case "sc-win32-status":
-                        Win32Status = short.Parse(val);
+                        Win32Status = long.Parse(val);
                         break;
                     case "sc-bytes":
                         BytesSent = long.Parse(val);
@@ -114,7 +116,7 @@ namespace W3CLogFileParser
                         BytesReceived = long.Parse(val);
                         break;
                     case "time-taken":
-                        TimeTakenInMilliseconds = short.Parse(val);
+                        TimeTakenInMilliseconds = int.Parse(val);
                         break;
                 }
             }
