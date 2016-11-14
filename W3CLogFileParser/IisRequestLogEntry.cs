@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Data.Linq;
+using System.Data;
 using System.Net;
 
 namespace W3CLogFileParser
@@ -120,38 +120,34 @@ namespace W3CLogFileParser
             }
         }
 
-        public void SaveToDatabase()
+        public void AddToDataTable(DataTable table)
         {
-            using (var db = new DataWarehouseDataContext())
-            {
-                db.IisRequests.InsertOnSubmit(new IisRequest
-                {
-                    InsertDate = DateTime.Now,
-                    Date = Date,
-                    Time = Time,
-                    ServerName = ServerName,
-                    ServerIP = ServerIP == null ? null : new Binary(ServerIP.GetAddressBytes()),
-                    ServerPort = ServerPort,
-                    Method = Method,
-                    UriStem = UriStem,
-                    UriQuery = UriQuery,
-                    TimeTakenInMilliseconds = TimeTakenInMilliseconds,
-                    ProtocolStatus = ProtocolStatus,
-                    ProtocolSubstatus = ProtocolSubstatus,
-                    ProtocolVersion = ProtocolVersion,
-                    ClientIP = ClientIP == null ? null : new Binary(ClientIP.GetAddressBytes()),
-                    UserAgent = UserAgent,
-                    Referrer = Referrer,
-                    Username = Username,
-                    Win32Status = Win32Status,
-                    ServiceName = ServiceName,
-                    Host = Host,
-                    BytesSent = BytesSent,
-                    BytesReceived = BytesReceived
-                });
-
-                db.SubmitChanges();
-            }
+            table.Rows.Add(
+                1, // Id
+                DateTime.Now, // InsertDate
+                Date,
+                Time.HasValue ? Time.ToString() : null,
+                ServerName,
+                ServerIP.GetAddressBytes(),
+                ServerPort,
+                Method,
+                UriStem,
+                UriQuery,
+                TimeTakenInMilliseconds,
+                ProtocolStatus,
+                ProtocolSubstatus,
+                ProtocolVersion,
+                ClientIP.GetAddressBytes(),
+                UserAgent,
+                Referrer,
+                Username,
+                Cookie,
+                Win32Status,
+                ServiceName,
+                Host,
+                BytesSent,
+                BytesReceived
+            );
         }
     }
 }

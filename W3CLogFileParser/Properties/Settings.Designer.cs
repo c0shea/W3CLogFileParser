@@ -35,7 +35,7 @@ namespace W3CLogFileParser.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("D:\\Server IIS Logs\\LogFiles")]
+        [global::System.Configuration.DefaultSettingValueAttribute("D:\\Server IIS Logs\\LogFiles\\W3SVC1")]
         public string LogFileDirectory {
             get {
                 return ((string)(this["LogFileDirectory"]));

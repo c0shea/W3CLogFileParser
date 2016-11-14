@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.IO;
 using System.Linq;
 using NLog;
@@ -6,18 +9,21 @@ using W3CLogFileParser.Properties;
 
 namespace W3CLogFileParser
 {
-    public class Program
+    public static class Program
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private const char FieldDelimiter = ' ';
 
         public static void Main(string[] args)
         {
+            Logger.Info("===============");
             Logger.Info("Program started");
 
             var files = Directory.GetFiles(Settings.Default.LogFileDirectory, Settings.Default.LogFileMask, SearchOption.AllDirectories).ToList();
-
             Logger.Info($"{files.Count} files to be processed");
+
+            Logger.Debug("Creating DataTable");
+            var table = PrepareBulkCopyDataTable();
 
             foreach (var file in files)
             {
@@ -59,13 +65,45 @@ namespace W3CLogFileParser
                     try
                     {
                         var entry = new IisRequestLogEntry(fieldOrder, FieldDelimiter, line);
-                        entry.SaveToDatabase();
+                        entry.AddToDataTable(table);
                     }
                     catch (Exception ex)
                     {
                         fileHasErrors = true;
-                        Logger.Error(ex, "An error occured trying to parse and save the line in the database.");
+                        Logger.Error(ex, "An error occured trying to parse the line and add it to the DataTable.");
                     }
+                }
+
+                try
+                {
+                    Logger.Debug($"Bulk inserting {table.Rows.Count} rows...");
+
+                    using (SqlConnection connection = new SqlConnection(Settings.Default.DataWarehouseConnectionString))
+                    {
+                        var bulkCopy = new SqlBulkCopy
+                        (
+                            connection,
+                            SqlBulkCopyOptions.TableLock |
+                            SqlBulkCopyOptions.FireTriggers |
+                            SqlBulkCopyOptions.UseInternalTransaction,
+                            null
+                        )
+                        {
+                            DestinationTableName = "Logs.IisRequest"
+                        };
+
+                        connection.Open();
+                        bulkCopy.WriteToServer(table);
+                        connection.Close();
+                    }
+
+                    Logger.Debug("Finished bulk insert. Clearing DataTable.");
+                    table.Clear();
+                }
+                catch (SqlException ex)
+                {
+                    Logger.Error(ex, "Failed to insert the records into the database.");
+                    fileHasErrors = true;
                 }
 
                 if (fileHasErrors)
@@ -73,18 +111,49 @@ namespace W3CLogFileParser
                     Logger.Warn($"File {file} encountered errors during parsing. Some records may have been skipped.");
 
                     var renameTo = file + ".wrn";
-                    Logger.Info($"Renaming file from {file} to {renameTo}");
+                    Logger.Debug($"Renaming file to {renameTo}");
                     File.Move(file, renameTo);
                 }
                 else
                 {
                     var renameTo = file + ".scc";
-                    Logger.Info($"Renaming file from {file} to {renameTo}");
+                    Logger.Debug($"Renaming file to {renameTo}");
                     File.Move(file, renameTo);
                 }
             }
 
             Logger.Info("Program finished");
+        }
+
+        private static DataTable PrepareBulkCopyDataTable()
+        {
+            var table = new DataTable("IisRequest");
+            table.Columns.Add(new DataColumn("Id", typeof(long)));
+            table.Columns.Add(new DataColumn("InsertDate", typeof(SqlDateTime)));
+            table.Columns.Add(new DataColumn("Date", typeof(SqlDateTime)));
+            table.Columns.Add(new DataColumn("Time", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("ServerName", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("ServerIP", typeof(SqlBinary)));
+            table.Columns.Add(new DataColumn("ServerPort", typeof(int)));
+            table.Columns.Add(new DataColumn("Method", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("UriStem", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("UriQuery", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("TimeTakenInMilliseconds", typeof(int)));
+            table.Columns.Add(new DataColumn("ProtocolStatus", typeof(short)));
+            table.Columns.Add(new DataColumn("ProtocolSubstatus", typeof(short)));
+            table.Columns.Add(new DataColumn("ProtocolVersion", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("ClientIP", typeof(SqlBinary)));
+            table.Columns.Add(new DataColumn("UserAgent", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("Referrer", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("Username", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("Cookie", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("Win32Status", typeof(short)));
+            table.Columns.Add(new DataColumn("ServiceName", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("Host", typeof(SqlString)));
+            table.Columns.Add(new DataColumn("BytesSent", typeof(long)));
+            table.Columns.Add(new DataColumn("BytesReceived", typeof(long)));
+
+            return table;
         }
     }
 }
