@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
@@ -12,129 +12,66 @@ namespace W3CLogFileParser
 {
     public static class Program
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private const char FieldDelimiter = ' ';
+        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        
 
-        public static void Main(string[] args)
+        private static List<string> GetFileNamesToProcess()
+        {
+            var files = Directory.GetFiles(Settings.Default.LogFileDirectory, Settings.Default.LogFileMask, SearchOption.AllDirectories).ToList();
+            Log.Info("{0} files to be processed", files.Count);
+
+            return files;
+        }
+
+        public static void Main()
         {
             var stopwatch = Stopwatch.StartNew();
-            Logger.Info("===============");
-            Logger.Info("Program started");
+            Log.Info("Started");
 
-            var files = Directory.GetFiles(Settings.Default.LogFileDirectory, Settings.Default.LogFileMask, SearchOption.AllDirectories).ToList();
-            Logger.Info($"{files.Count} files to be processed");
-
-            Logger.Debug("Creating DataTable");
             var table = PrepareBulkCopyDataTable();
 
-            foreach (var file in files)
+            foreach (var fileName in GetFileNamesToProcess())
             {
-                Logger.Info($"Processing file {file}");
-
-                string[] lines;
+                Log.Info("Processing file '{0}'", fileName);
 
                 try
                 {
-                    lines = File.ReadAllLines(file);
+                    IisLogFile.Parse(fileName, table);
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warn(ex, $"Unable to read file {file}. Skipping.");
+                    Log.Warn(ex, "Unable to parse file '{0}'. Skipping.", fileName);
+                    
+                    // Don't insert any of the entries in the log file since there was an error parsing
+                    table.Clear();
+                    IisLogFile.MarkFileAsError(fileName);
+
                     continue;
                 }
 
-                var fileHasErrors = false;
-                string[] fieldOrder = null;
-
-                foreach (var line in lines)
+                try
                 {
-                    if (line.StartsWith("#Fields:"))
-                    {
-                        fieldOrder = line.Replace("#Fields: ", "").Split(FieldDelimiter);
-                        continue;
-                    }
-                    if (line.StartsWith("#"))
-                    {
-                        // Skip comment lines
-                        continue;
-                    }
-
-                    if (fieldOrder == null)
-                    {
-                        throw new InvalidOperationException("Field order has not been defined in the log file");
-                    }
-
-                    try
-                    {
-                        var entry = new IisRequestLogEntry(fieldOrder, FieldDelimiter, line);
-                        entry.AddToDataTable(table);
-                    }
-                    catch (Exception ex)
-                    {
-                        fileHasErrors = true;
-                        Logger.Error(ex, $"An error occured trying to parse the line [{line}] and add it to the DataTable. Skipping file.");
-                        break;
-                    }
+                    IisLogFile.BulkCopy(table);
                 }
-
-                if (!fileHasErrors)
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        Logger.Debug($"Bulk inserting {table.Rows.Count} rows...");
+                    Log.Error(ex, "Failed to insert the log entries into the database.");
+                    IisLogFile.MarkFileAsError(fileName);
 
-                        using (SqlConnection connection = new SqlConnection(Settings.Default.DataWarehouseConnectionString))
-                        {
-                            var bulkCopy = new SqlBulkCopy
-                            (
-                                connection,
-                                SqlBulkCopyOptions.TableLock |
-                                SqlBulkCopyOptions.FireTriggers |
-                                SqlBulkCopyOptions.UseInternalTransaction,
-                                null
-                            )
-                            {
-                                DestinationTableName = Settings.Default.DestinationTable
-                            };
-
-                            connection.Open();
-                            bulkCopy.WriteToServer(table);
-                            connection.Close();
-                        }
-
-                        Logger.Debug("Finished bulk insert.");
-                    }
-                    catch (SqlException ex)
-                    {
-                        Logger.Error(ex, "Failed to insert the records into the database.");
-                        fileHasErrors = true;
-                    }
+                    continue;
                 }
-
-                table.Clear();
-
-                if (fileHasErrors)
-                {
-                    Logger.Warn($"File {file} encountered errors during parsing. The records in the file were not inserted into the database.");
-
-                    var renameTo = file + ".wrn";
-                    Logger.Debug($"Renaming file to {renameTo}");
-                    File.Move(file, renameTo);
-                }
-                else
-                {
-                    var renameTo = file + ".scc";
-                    Logger.Debug($"Renaming file to {renameTo}");
-                    File.Move(file, renameTo);
-                }
+                
+                IisLogFile.MarkFileAsSuccess(fileName);
             }
 
             stopwatch.Stop();
-            Logger.Info($"Program finished. Elapsed time: {stopwatch.ElapsedMilliseconds / 1000} seconds ({stopwatch.ElapsedMilliseconds} ms)");
+            Log.Info("Program finished. Elapsed time: {0} seconds ({1} ms)", stopwatch.ElapsedMilliseconds / 1000, stopwatch.ElapsedMilliseconds);
         }
 
         private static DataTable PrepareBulkCopyDataTable()
         {
+            Log.Debug("Creating DataTable");
+
             var table = new DataTable("IisRequest");
             table.Columns.Add(new DataColumn("Id", typeof(long)));
             table.Columns.Add(new DataColumn("InsertDate", typeof(SqlDateTime)));

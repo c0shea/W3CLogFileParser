@@ -128,7 +128,7 @@ namespace W3CLogFileParser
                 1, // Id
                 DateTime.Now, // InsertDate
                 Date,
-                Time.HasValue ? Time.ToString() : null,
+                Time.HasValue ? Time.ToString() : (object)DBNull.Value,
                 ServerName,
                 ServerIP.GetAddressBytes(),
                 ServerPort,
